@@ -44,6 +44,15 @@
   .topbar-brand { font-weight: 500; }
   .topbar-brand span { color: #86868b; }
   .topbar-version { color: #86868b; }
+  .topbar-home {
+    color: #86868b;
+    font-size: 13px;
+    margin-right: 14px;
+    padding-right: 14px;
+    border-right: 1px solid #d2d2d7;
+    transition: color 0.15s;
+  }
+  .topbar-home:hover { color: #0071e3; text-decoration: none; }
 
   /* ===== Hero ===== */
   .hero-wrap {
@@ -513,7 +522,7 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <div class="topbar-brand">cloudwatch-ops <span>· 操作手册</span></div>
+    <div class="topbar-brand"><a href="指标管理-总览.html" class="topbar-home">← 返回总览</a>cloudwatch-ops <span>· 操作手册</span></div>
     <div class="topbar-version">v1.0</div>
   </div>
 </header>
