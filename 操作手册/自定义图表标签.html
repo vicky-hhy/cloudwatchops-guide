@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自定义图表标签 · cloudwatch-ops</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #fbfbfd;
+    color: #1d1d1f;
+    line-height: 1.6;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  a { color: #0071e3; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ===== 顶部 ===== */
+  .topbar {
+    border-bottom: 1px solid #d2d2d7;
+    background: rgba(251, 251, 253, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 48px;
+  }
+  .topbar-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #1d1d1f;
+  }
+  .topbar-brand { font-weight: 500; }
+  .topbar-brand span { color: #86868b; }
+  .topbar-version { color: #86868b; }
+
+  /* ===== Hero ===== */
+  .hero-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 80px 32px 56px;
+  }
+  .hero-eyebrow {
+    font-size: 14px;
+    color: #86868b;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    color: #1d1d1f;
+  }
+  h1 .emoji {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -2px;
+  }
+  .hero-date {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #86868b;
+  }
+
+  /* 概述 */
+  .summary {
+    margin-top: 32px;
+    padding: 22px 28px;
+    background: #fffaeb;
+    border-radius: 14px;
+  }
+  .summary p {
+    font-size: 16px;
+    color: #5b4818;
+    line-height: 1.7;
+  }
+  .summary .emoji { margin-right: 6px; }
+
+  /* ===== 图片放大 Lightbox ===== */
+  .screenshot { cursor: zoom-in; transition: transform 0.2s ease; }
+  .screenshot:hover { transform: translateY(-2px); }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 22, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    cursor: zoom-out;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .lightbox.show {
+    display: flex;
+    opacity: 1;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transition: transform 0.25s ease;
+    transform: scale(0.96);
+  }
+  .lightbox.show img { transform: scale(1); }
+
+  .lightbox-hint {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    pointer-events: none;
+  }
+  .lightbox-hint kbd {
+    background: rgba(255, 255, 255, 0.12);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    margin: 0 2px;
+  }
+
+  /* ===== 主布局 ===== */
+  .layout {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 64px;
+  }
+
+  /* ===== 侧边栏 ===== */
+  .sidebar {
+    position: sticky;
+    top: 72px;
+    align-self: start;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb {
+    background: #d2d2d7;
+    border-radius: 2px;
+  }
+  .sidebar-title {
+    font-size: 12px;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: #515154;
+    font-size: 14px;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    border-left: 2px solid transparent;
+    margin-left: -2px;
+  }
+  .sidebar a:hover {
+    color: #1d1d1f;
+    background: #f0f0f3;
+    text-decoration: none;
+  }
+  .sidebar a.active {
+    color: #0071e3;
+    background: #eaf3ff;
+    font-weight: 500;
+  }
+  .sidebar a .num {
+    font-size: 11px;
+    color: #86868b;
+    font-variant-numeric: tabular-nums;
+    min-width: 18px;
+    font-weight: 500;
+  }
+  .sidebar a.active .num { color: #0071e3; }
+  .sidebar a .emoji {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .sidebar-divider {
+    height: 1px;
+    background: #e8e8ed;
+    margin: 16px 0;
+  }
+
+  /* ===== 主内容 ===== */
+  .main { min-width: 0; }
+
+  /* ===== 步骤 ===== */
+  .step {
+    margin-bottom: 72px;
+    scroll-margin-top: 72px;
+  }
+  .step-num {
+    font-size: 13px;
+    color: #86868b;
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+  .step-title {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: #1d1d1f;
+  }
+  .step-title .emoji {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -1px;
+  }
+  .step-desc {
+    font-size: 17px;
+    color: #1d1d1f;
+    line-height: 1.65;
+    margin-bottom: 24px;
+  }
+  .step-desc strong {
+    font-weight: 600;
+    color: #0071e3;
+  }
+  .step-desc code {
+    font-family: "SF Mono", ui-monospace, Menlo, Monaco, monospace;
+    background: #f0f0f3;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 15px;
+    color: #1d1d1f;
+  }
+
+  /* 截图 */
+  .screenshot {
+    margin: 24px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+    border: 1px solid #ebebeb;
+    background: #fff;
+  }
+  .screenshot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* ===== 卡片 ===== */
+  .card {
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 15px;
+    line-height: 1.65;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .card-emoji {
+    font-size: 20px;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+  .card-body { flex: 1; }
+  .card-label {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  .card.warn { background: #fdf2ec; }
+  .card.warn .card-label,
+  .card.warn .card-body { color: #8a4a1f; }
+
+  .card.tip { background: #ecf6f1; }
+  .card.tip .card-label,
+  .card.tip .card-body { color: #2c5f47; }
+
+  .card.info { background: #eef2f9; }
+  .card.info .card-label,
+  .card.info .card-body { color: #3a4a6b; }
+
+  .card.alert { background: #fbebec; }
+  .card.alert .card-label,
+  .card.alert .card-body { color: #8a3a3f; }
+
+  /* 字段表 */
+  .field-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 15px;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #e8e8ed;
+  }
+  .field-table th,
+  .field-table td {
+    text-align: left;
+    padding: 14px 18px;
+    border-bottom: 1px solid #f0f0f3;
+  }
+  .field-table tr:last-child td { border-bottom: none; }
+  .field-table th {
+    color: #86868b;
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    background: #fafafd;
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .field-table td:first-child {
+    font-weight: 500;
+    color: #1d1d1f;
+  }
+  .field-table td code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    background: #f5f5f7;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* 有序列表 */
+  .step ol {
+    margin: 20px 0;
+    padding-left: 24px;
+  }
+  .step ol li {
+    margin-bottom: 10px;
+    color: #1d1d1f;
+    line-height: 1.65;
+  }
+  .step ol li strong { font-weight: 600; }
+
+  /* ===== 完成 ===== */
+  .done {
+    margin: 80px 0 64px;
+    padding: 44px 40px;
+    background: linear-gradient(135deg, #f0faf4 0%, #e8f5ed 100%);
+    border-radius: 18px;
+    text-align: center;
+  }
+  .done .emoji {
+    font-size: 40px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .done h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1d6b3a;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .done p {
+    font-size: 15px;
+    color: #2c5f47;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* ===== FAQ ===== */
+  .faq {
+    margin-top: 80px;
+    padding-top: 48px;
+    border-top: 1px solid #d2d2d7;
+  }
+  .faq h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 32px;
+    color: #1d1d1f;
+  }
+  .faq h2 .emoji { margin-right: 8px; }
+  .faq details {
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .faq summary {
+    padding: 20px 0;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 500;
+    color: #1d1d1f;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: color 0.15s;
+  }
+  .faq summary:hover { color: #0071e3; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: '+';
+    font-size: 22px;
+    font-weight: 300;
+    color: #86868b;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .faq details[open] summary::after { content: '−'; }
+  .faq-answer {
+    padding: 0 0 20px;
+    color: #515154;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .faq-answer code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    background: #f5f5f7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* ===== 页脚 ===== */
+  .footer {
+    border-top: 1px solid #d2d2d7;
+    padding: 32px 32px 48px;
+    text-align: center;
+    font-size: 12px;
+    color: #86868b;
+  }
+
+  /* 响应式 */
+  @media (max-width: 860px) {
+    .layout {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .sidebar { display: none; }
+    .hero-wrap { padding: 56px 24px 32px; }
+    .layout { padding: 0 24px 64px; }
+    h1 { font-size: 32px; }
+    .step-title { font-size: 24px; }
+  }
+
+  /* 打印 */
+  @media print {
+    .topbar, .footer, .sidebar, .lightbox { display: none; }
+    .layout { grid-template-columns: 1fr; gap: 0; padding: 0; }
+    body { font-size: 12pt; background: #fff; }
+    .step { page-break-inside: avoid; margin-bottom: 32px; }
+    .screenshot { break-inside: avoid; box-shadow: none; }
+    .card, .summary, .done, .field-table { break-inside: avoid; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand">cloudwatch-ops <span>· 操作手册</span></div>
+    <div class="topbar-version">v1.0</div>
+  </div>
+</header>
+
+<section class="hero-wrap">
+  <div class="hero-eyebrow">配置管理 / 指标配置 / 指标标签</div>
+  <h1><span class="emoji">🏷️</span>自定义图表标签</h1>
+  <div class="hero-date">更新日期 · 2026 年 5 月 11 日</div>
+  <div class="summary">
+    <p>
+      <span class="emoji">📖</span><strong>功能描述：</strong>新建图表标签并批量绑定到指标——相同标签的多个指标会聚合在同一张图表中展示。例如，为「带宽出向」和「带宽入向」设置标签「带宽出/入向」，即可在一张图上同时查看二者的监控曲线。
+    </p>
+  </div>
+</section>
+
+<div class="layout">
+
+  <!-- ============ 侧边栏 ============ -->
+  <aside class="sidebar">
+    <div class="sidebar-title">步骤导航</div>
+    <nav>
+      <a href="#step-1" class="step-link"><span class="num">01</span><span class="emoji">🚪</span><span>进入图表标签页面</span></a>
+      <a href="#step-2" class="step-link"><span class="num">02</span><span class="emoji">✏️</span><span>填写标签信息</span></a>
+      <a href="#step-3" class="step-link"><span class="num">03</span><span class="emoji">✅</span><span>确认创建成功</span></a>
+      <a href="#step-4" class="step-link"><span class="num">04</span><span class="emoji">🔍</span><span>找到目标云产品</span></a>
+      <a href="#step-5" class="step-link"><span class="num">05</span><span class="emoji">☑️</span><span>选择待绑定指标</span></a>
+      <a href="#step-6" class="step-link"><span class="num">06</span><span class="emoji">⚙️</span><span>配置批量绑定</span></a>
+      <a href="#step-7" class="step-link"><span class="num">07</span><span class="emoji">🎯</span><span>验证绑定结果</span></a>
+    </nav>
+    <div class="sidebar-divider"></div>
+    <nav>
+      <a href="#faq" class="step-link"><span class="num">??</span><span class="emoji">💬</span><span>常见问题</span></a>
+    </nav>
+  </aside>
+
+  <!-- ============ 主内容 ============ -->
+  <main class="main">
+
+    <!-- 步骤 01 -->
+    <section class="step" id="step-1">
+      <div class="step-num">步骤 01</div>
+      <h2 class="step-title"><span class="emoji">🚪</span>进入图表标签页面</h2>
+      <p class="step-desc">
+        在左侧菜单依次点击 <strong>配置管理 → 指标配置</strong> ①，进入「指标标签」模块后，切换到 <strong>指标图表标签</strong> Tab，点击 <strong>新增</strong> 按钮 ② 开始创建。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤1_21-13-00.png" alt="进入指标图表标签页面并点击新增" loading="lazy">
+      </div>
+      <div class="card info">
+        <div class="card-emoji">ℹ️</div>
+        <div class="card-body">
+          <span class="card-label">提示</span>「指标标签」页面下有两个子 Tab：<strong>指标分组</strong>（将同类指标归组，在控制台以卡片形式展示，支持收起/展开）和 <strong>指标图表标签</strong>（让多个指标聚合显示在同一张图表中），请确认已切换到正确的 Tab。
+        </div>
+      </div>
+    </section>
+
+    <!-- 步骤 02 -->
+    <section class="step" id="step-2">
+      <div class="step-num">步骤 02</div>
+      <h2 class="step-title"><span class="emoji">✏️</span>填写标签信息</h2>
+      <p class="step-desc">
+        在弹出的「新增」对话框中填写标签信息 ①，所有字段均为必填项。填写完成后点击 <strong>确定</strong> ② 提交。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤2_21-18-42.png" alt="填写新增图表标签表单" loading="lazy">
+      </div>
+      <table class="field-table">
+        <thead>
+          <tr><th>字段</th><th>说明</th><th>示例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>所属云产品</td><td>下拉选择该标签归属的云产品</td><td><code>test</code></td></tr>
+          <tr><td>标签英文</td><td>控制台英文语言环境下的展示名称</td><td><code>test-图表标签</code></td></tr>
+          <tr><td>标签中文</td><td>控制台简体中文语言环境下的展示名称</td><td><code>测试-图表标签</code></td></tr>
+          <tr><td>标签繁体</td><td>控制台繁体中文语言环境下的展示名称</td><td><code>測試-圖表標籤</code></td></tr>
+        </tbody>
+      </table>
+      <div class="card tip">
+        <div class="card-emoji">💡</div>
+        <div class="card-body">
+          <span class="card-label">建议</span>三个语言字段均可在创建后通过「编辑」修改。提交前建议与团队对齐命名风格，建议格式为 <code>产品名-用途描述</code>，保持同一产品下各标签命名一致。
+        </div>
+      </div>
+    </section>
+
+    <!-- 步骤 03 -->
+    <section class="step" id="step-3">
+      <div class="step-num">步骤 03</div>
+      <h2 class="step-title"><span class="emoji">✅</span>确认创建成功</h2>
+      <p class="step-desc">
+        提交后，页面右上角出现「设置成功」提示，图表标签列表顶部同步显示刚创建的记录，说明标签已创建完成。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤3_21-19-04.png" alt="图表标签创建成功，新记录出现在列表顶部" loading="lazy">
+      </div>
+      <div class="card tip">
+        <div class="card-emoji">💡</div>
+        <div class="card-body">
+          <span class="card-label">建议</span>创建成功后，可在列表中核对「中文名称」「英文名称」「繁体名称」是否与预期一致，如有误可点击 <strong>编辑</strong> 修正。
+        </div>
+      </div>
+    </section>
+
+    <!-- 步骤 04 -->
+    <section class="step" id="step-4">
+      <div class="step-num">步骤 04</div>
+      <h2 class="step-title"><span class="emoji">🔍</span>找到目标云产品</h2>
+      <p class="step-desc">
+        在左侧菜单点击 <strong>云产品管理</strong> ①，在搜索框输入产品标识 ② 定位目标产品，找到后点击该产品行的 <strong>编辑</strong> 按钮 ③ 进入产品详情。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤4_21-19-35.png" alt="在云产品管理中搜索并点击编辑" loading="lazy">
+      </div>
+    </section>
+
+    <!-- 步骤 05 -->
+    <section class="step" id="step-5">
+      <div class="step-num">步骤 05</div>
+      <h2 class="step-title"><span class="emoji">☑️</span>选择待绑定指标</h2>
+      <p class="step-desc">
+        进入产品详情后，切换到 <strong>指标管理</strong> Tab，在指标列表中通过左侧复选框勾选需要绑定图表标签的指标 ①，然后点击 <strong>更新指标标签</strong> 按钮 ②。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤5_21-20-08.png" alt="在指标管理Tab勾选指标并点击更新指标标签" loading="lazy">
+      </div>
+      <div class="card info">
+        <div class="card-emoji">ℹ️</div>
+        <div class="card-body">
+          <span class="card-label">提示</span>列表中「图表标签」列显示 <code>-</code> 的指标表示尚未绑定图表标签，可优先勾选这些指标进行批量绑定。
+        </div>
+      </div>
+    </section>
+
+    <!-- 步骤 06 -->
+    <section class="step" id="step-6">
+      <div class="step-num">步骤 06</div>
+      <h2 class="step-title"><span class="emoji">⚙️</span>配置批量绑定设置</h2>
+      <p class="step-desc">
+        在弹出的「批量绑定标签」对话框中，按以下步骤完成配置：
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤6_21-20-45.png" alt="批量绑定标签弹窗配置" loading="lazy">
+      </div>
+      <ol>
+        <li><strong>分组标签设置 ①</strong> ——勾选「不变动分组标签」，保持指标现有的分组标签不受影响。</li>
+        <li><strong>图表标签设置 ②</strong> ——在「图表标签」下拉框中选择刚刚创建的图表标签（如 <code>测试-图表标签</code>）。</li>
+        <li><strong>提交 ③</strong> ——确认底部预览区域中显示的指标无误后，点击 <strong>确定</strong> 执行绑定。</li>
+      </ol>
+      <div class="card alert">
+        <div class="card-emoji">🚨</div>
+        <div class="card-body">
+          <span class="card-label">警示</span>提交后，控制台上的指标展示会按照你设置的图表标签实时生效，请谨慎操作！
+        </div>
+      </div>
+    </section>
+
+    <!-- 步骤 07 -->
+    <section class="step" id="step-7">
+      <div class="step-num">步骤 07</div>
+      <h2 class="step-title"><span class="emoji">🎯</span>验证绑定结果</h2>
+      <p class="step-desc">
+        提交后，页面右上角出现「执行成功」提示，指标列表的「图表标签」列已更新，所选指标均显示刚绑定的图表标签名称，说明绑定操作已生效。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/自定义图表标签/步骤7_21-21-18.png" alt="执行成功，指标图表标签列已填充" loading="lazy">
+      </div>
+      <div class="card tip">
+        <div class="card-emoji">💡</div>
+        <div class="card-body">
+          <span class="card-label">建议</span>绑定完成后，可切换到产品详情的 <strong>图表标签</strong> Tab，查看当前产品下所有图表标签的汇总视图，确认标签覆盖范围符合预期。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 完成卡片 ============ -->
+    <div class="done">
+      <span class="emoji">🎉</span>
+      <h2>全部完成啦</h2>
+      <p>图表标签已创建并绑定完成，绑定了相同标签的指标将在控制台聚合显示在同一张图表中。后续可前往「云产品管理」为更多产品的指标绑定标签。</p>
+    </div>
+
+    <!-- ============ FAQ ============ -->
+    <section class="faq" id="faq">
+      <h2><span class="emoji">💬</span>常见问题</h2>
+
+      <details>
+        <summary>批量绑定后，部分指标的图表标签没有更新？</summary>
+        <div class="faq-answer">
+          请检查以下几点：① 确认该指标在勾选时已被选中（复选框为蓝色）；② 确认弹窗底部预览区域中包含该指标；③ 若勾选了「不变动图表标签」，该选项会阻止更新操作，请取消勾选后重试。如仍未生效，可尝试刷新页面后查看。
+        </div>
+      </details>
+
+      <details>
+        <summary>图表标签和分组标签有什么区别？</summary>
+        <div class="faq-answer">
+          <strong>分组标签</strong>将同类指标（如 CPU、GPU、内存）归入同一分组，在控制台以卡片形式展示，支持按组收起或展开，默认全部展开；<br><strong>图表标签</strong>则将多个指标聚合到同一张图表中展示，例如「带宽出项」和「带宽入项」设置相同标签后，监控曲线会合并显示在同一图表中。两者相互独立，同一指标可同时拥有分组标签和图表标签。
+        </div>
+      </details>
+
+      <details>
+        <summary>能否批量删除或修改已有图表标签？</summary>
+        <div class="faq-answer">
+          在「指标图表标签」列表中，每条记录右侧提供 <strong>编辑</strong> 和 <strong>删除</strong> 操作。编辑支持修改中文名称、英文名称和繁体名称；删除前请确认该标签未绑定任何指标，否则需先解绑再删除。批量操作暂不支持，需逐条处理。
+        </div>
+      </details>
+
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  cloudwatch-ops 操作手册 · 2026
+</footer>
+
+<!-- 图片放大 Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-label="图片放大查看">
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-hint">点击任意位置 或 按 <kbd>Esc</kbd> 关闭</div>
+</div>
+
+<script>
+  // 侧边栏当前步骤高亮
+  const links = document.querySelectorAll('.step-link');
+  const steps = document.querySelectorAll('.step, #faq');
+  function updateActive() {
+    let current = '';
+    steps.forEach(step => {
+      const rect = step.getBoundingClientRect();
+      if (rect.top <= 120) current = step.id;
+    });
+    links.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+
+  // 图片点击放大
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+
+  document.querySelectorAll('.screenshot').forEach(box => {
+    box.addEventListener('click', () => {
+      const img = box.querySelector('img');
+      if (!img) return;
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt || '';
+      lightbox.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+
+  function closeLightbox() {
+    lightbox.classList.remove('show');
+    document.body.style.overflow = '';
+    setTimeout(() => { lightboxImg.src = ''; }, 200);
+  }
+
+  lightbox.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && lightbox.classList.contains('show')) closeLightbox();
+  });
+</script>
+
+</body>
+</html>

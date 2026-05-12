@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指标管理 · cloudwatch-ops 操作手册</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #fbfbfd;
+    color: #1d1d1f;
+    line-height: 1.6;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  a { color: #0071e3; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ===== 顶部 ===== */
+  .topbar {
+    border-bottom: 1px solid #d2d2d7;
+    background: rgba(251, 251, 253, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 48px;
+  }
+  .topbar-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #1d1d1f;
+  }
+  .topbar-brand { font-weight: 500; }
+  .topbar-brand span { color: #86868b; }
+  .topbar-version { color: #86868b; }
+
+  /* ===== Hero ===== */
+  .hero-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 80px 32px 56px;
+  }
+  .hero-eyebrow {
+    font-size: 14px;
+    color: #86868b;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    color: #1d1d1f;
+  }
+  h1 .emoji {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -2px;
+  }
+  .hero-desc {
+    font-size: 19px;
+    color: #515154;
+    line-height: 1.5;
+    max-width: 640px;
+    font-weight: 400;
+  }
+  .hero-date {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #86868b;
+  }
+
+  /* ===== 概述卡片 ===== */
+  .summary {
+    margin-top: 32px;
+    padding: 22px 28px;
+    background: #fffaeb;
+    border-radius: 14px;
+  }
+  .summary p {
+    font-size: 16px;
+    color: #5b4818;
+    line-height: 1.7;
+  }
+  .summary .emoji { margin-right: 6px; }
+
+  /* ===== 主容器 ===== */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+  }
+
+  /* ===== 推荐流程 ===== */
+  .flow-section {
+    margin-bottom: 72px;
+  }
+  .flow-section h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 32px;
+    color: #1d1d1f;
+  }
+  .flow-section h2 .emoji { margin-right: 8px; }
+
+  .flow-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .flow-step {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    border: 1px solid #ebebeb;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .flow-step:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05);
+  }
+  .flow-num {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0071e3;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .flow-emoji {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .flow-step h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+  }
+  .flow-step p {
+    font-size: 13px;
+    color: #86868b;
+    line-height: 1.5;
+  }
+
+  .flow-arrow {
+    display: none; /* hidden on mobile, shown via pseudo on desktop */
+  }
+
+  @media (max-width: 860px) {
+    .flow-steps {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+  }
+
+  /* ===== 手册卡片 ===== */
+  .manuals-section {
+    margin-bottom: 72px;
+  }
+  .manuals-section h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 32px;
+    color: #1d1d1f;
+  }
+  .manuals-section h2 .emoji { margin-right: 8px; }
+
+  .manual-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .manual-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    border: 1px solid #ebebeb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .manual-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.05);
+    text-decoration: none;
+  }
+  .manual-card:hover .manual-link {
+    color: #0071e3;
+  }
+
+  .manual-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .manual-card h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+  }
+  .manual-card .manual-meta {
+    font-size: 13px;
+    color: #86868b;
+    margin-bottom: 12px;
+  }
+  .manual-card .manual-desc {
+    font-size: 15px;
+    color: #515154;
+    line-height: 1.6;
+    flex: 1;
+    margin-bottom: 20px;
+  }
+  .manual-link {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1d1d1f;
+    transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .manual-link::after {
+    content: '→';
+    font-size: 16px;
+    transition: transform 0.15s ease;
+  }
+  .manual-card:hover .manual-link::after {
+    transform: translateX(3px);
+  }
+
+  /* 快速跳转标签 */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  .badge.core { background: #eaf3ff; color: #0071e3; }
+  .badge.opt { background: #f5f5f7; color: #86868b; }
+
+  /* ===== FAQ ===== */
+  .faq {
+    margin-top: 80px;
+    padding-top: 48px;
+    border-top: 1px solid #d2d2d7;
+  }
+  .faq h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 32px;
+    color: #1d1d1f;
+  }
+  .faq h2 .emoji { margin-right: 8px; }
+  .faq details {
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .faq summary {
+    padding: 20px 0;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 500;
+    color: #1d1d1f;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: color 0.15s;
+  }
+  .faq summary:hover { color: #0071e3; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: '+';
+    font-size: 22px;
+    font-weight: 300;
+    color: #86868b;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .faq details[open] summary::after { content: '−'; }
+  .faq-answer {
+    padding: 0 0 20px;
+    color: #515154;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .faq-answer code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    background: #f5f5f7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* ===== 页脚 ===== */
+  .footer {
+    border-top: 1px solid #d2d2d7;
+    padding: 32px 32px 48px;
+    text-align: center;
+    font-size: 12px;
+    color: #86868b;
+  }
+
+  @media (max-width: 860px) {
+    .manual-cards { grid-template-columns: 1fr; }
+    .hero-wrap { padding: 56px 24px 32px; }
+    .container { padding: 0 24px 64px; }
+    h1 { font-size: 32px; }
+  }
+
+  @media print {
+    .topbar, .footer { display: none; }
+    body { font-size: 12pt; background: #fff; }
+    .manual-card, .flow-step { break-inside: avoid; box-shadow: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand">cloudwatch-ops <span>· 操作手册</span></div>
+    <div class="topbar-version">v1.0</div>
+  </div>
+</header>
+
+<section class="hero-wrap">
+  <h1><span class="emoji">📈</span>CloudWatchOps操作手册</h1>
+  <div class="hero-date">更新日期 · 2026 年 5 月 12 日</div>
+  <div class="summary">
+    <p>
+      <span class="emoji">📖</span><strong>总览说明：</strong>了解云监控支持的功能配置以及核心操作流程。<br>指标管理是云监控的基础——先接入指标，再按需配置分组和图表标签，最后管理生命周期状态。点击下方卡片可跳转到各模块的详细操作手册。
+    </p>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- 推荐流程 -->
+  <section class="flow-section">
+    <h2><span class="emoji">🗺️</span>推荐操作顺序</h2>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-num">STEP 1</div>
+        <span class="flow-emoji">📈</span>
+        <h3>新指标接入</h3>
+        <p>先创建指标并完成审核，确保指标存在于系统中</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">STEP 2</div>
+        <span class="flow-emoji">🗂️</span>
+        <h3>自定义指标分组</h3>
+        <p>将同类指标归入分组，在控制台卡片化展示</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">STEP 3</div>
+        <span class="flow-emoji">🏷️</span>
+        <h3>自定义图表标签</h3>
+        <p>为指标绑定图表标签，同一张图聚合展示</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">STEP 4</div>
+        <span class="flow-emoji">⚙️</span>
+        <h3>调整指标状态</h3>
+        <p>管理指标生命周期，控制前端可见性</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 手册卡片 -->
+  <section class="manuals-section">
+    <h2><span class="emoji">📚</span>操作手册</h2>
+    <div class="manual-cards">
+
+      <a class="manual-card" href="新指标接入.html">
+        <span class="manual-icon">📈</span>
+        <h3>新指标接入</h3>
+        <div class="manual-meta"><span class="badge core">核心流程</span></div>
+        <p class="manual-desc">新增监控指标的完整接入流程：申请新指标 → 审核通过 → 关联云产品 → 设置上线状态，最终让指标对用户在控制台可见。</p>
+        <span class="manual-link">查看详情</span>
+      </a>
+
+      <a class="manual-card" href="自定义指标分组.html">
+        <span class="manual-icon">🗂️</span>
+        <h3>自定义指标分组</h3>
+        <div class="manual-meta"><span class="badge opt">可选配置</span></div>
+        <p class="manual-desc">将同类指标归入同一分组，控制台以卡片形式展示。支持按组收起或展开，帮助客户快速定位同一维度的监控数据。</p>
+        <span class="manual-link">查看详情</span>
+      </a>
+
+      <a class="manual-card" href="自定义图表标签.html">
+        <span class="manual-icon">🏷️</span>
+        <h3>自定义图表标签</h3>
+        <div class="manual-meta"><span class="badge opt">可选配置</span></div>
+        <p class="manual-desc">新建图表标签并批量绑定到指标——相同标签的多个指标会聚合在同一张图表中展示，便于对比查看关联指标的监控曲线。</p>
+        <span class="manual-link">查看详情</span>
+      </a>
+
+      <a class="manual-card" href="调整指标状态.html">
+        <span class="manual-icon">⚙️</span>
+        <h3>调整指标状态</h3>
+        <div class="manual-meta"><span class="badge core">核心流程</span></div>
+        <p class="manual-desc">对云产品下的指标进行状态管理，支持未上线 / 灰度中 / 已上线 / 已下线四种状态切换，控制指标在前端控制台的可见性与生命周期。</p>
+        <span class="manual-link">查看详情</span>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <h2><span class="emoji">💬</span>常见问题</h2>
+
+    <details>
+      <summary>我应该按什么顺序操作这四个模块？</summary>
+      <div class="faq-answer">
+        推荐顺序为：<strong>新指标接入 → 自定义指标分组 → 自定义图表标签 → 调整指标状态</strong>。其中「自定义图表标签」和「自定义指标分组」为可选配置，不影响指标正常使用。如果只是维护现有指标的状态，可直接使用「调整指标状态」模块。
+      </div>
+    </details>
+
+    <details>
+      <summary>分组和图表标签有什么区别？</summary>
+      <div class="faq-answer">
+        「分组」决定指标在控制台的展示层级——同一分组的指标放在一张卡片中，用户可按组收起展开；「图表标签」决定指标在图表中的展示方式——相同标签的多个指标曲线聚合在同一张图中，便于对比。两者互不影响，可以独立配置。
+      </div>
+    </details>
+
+    <details>
+      <summary>能否跳过分组直接配置图表标签？</summary>
+      <div class="faq-answer">
+        可以。分组和图表标签是两个独立的配置维度，没有先后依赖。没有分组的指标在控制台默认平铺展示，仍可正常使用图表标签聚合功能。
+      </div>
+    </details>
+
+    <details>
+      <summary>这些操作需要什么权限？</summary>
+      <div class="faq-answer">
+        以上四个模块均需要 cloudwatch-ops 管理后台的「产品经理」或「产品研发」权限。如无权限，请联系监控产品经理开通。
+      </div>
+    </details>
+  </section>
+
+</div>
+
+<footer class="footer">
+  cloudwatch-ops 操作手册 · 总览 · 2026
+</footer>
+
+</body>
+</html>

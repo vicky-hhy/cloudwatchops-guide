@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  cloudwatch-ops 操作手册标准模板 v1.0
+  ============================================================
+  使用方法:
+  1. 复制本文件并重命名为 {模块名}.html
+  2. 全局替换占位符:
+     - {MODULE_NAME}     → 模块名(如 自定义指标分组)
+     - {MODULE_EMOJI}    → 模块 emoji(参考规范 4.2 节)
+     - {PARENT_PATH}     → 父模块路径(如 配置管理 / 指标配置)
+     - {UPDATE_DATE}     → 更新日期(如 2026 年 5 月 11 日)
+     - {SUMMARY}         → 模块用途一句话说明
+     - {SCREENSHOT_DIR}  → 截图目录名(如 自定义指标分组)
+  3. 按需增减步骤(每个 <section class="step"> 是一个步骤)
+  4. 严格遵循《操作手册-设计规范.md》
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{MODULE_NAME} · cloudwatch-ops</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #fbfbfd;
+    color: #1d1d1f;
+    line-height: 1.6;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  a { color: #0071e3; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ===== 顶部 ===== */
+  .topbar {
+    border-bottom: 1px solid #d2d2d7;
+    background: rgba(251, 251, 253, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 48px;
+  }
+  .topbar-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #1d1d1f;
+  }
+  .topbar-brand { font-weight: 500; }
+  .topbar-brand span { color: #86868b; }
+  .topbar-version { color: #86868b; }
+
+  /* ===== Hero ===== */
+  .hero-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 80px 32px 56px;
+  }
+  .hero-eyebrow {
+    font-size: 14px;
+    color: #86868b;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    color: #1d1d1f;
+  }
+  h1 .emoji {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -2px;
+  }
+  .hero-date {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #86868b;
+  }
+
+  /* 概述 */
+  .summary {
+    margin-top: 32px;
+    padding: 22px 28px;
+    background: #fffaeb;
+    border-radius: 14px;
+  }
+  .summary p {
+    font-size: 16px;
+    color: #5b4818;
+    line-height: 1.7;
+  }
+  .summary .emoji { margin-right: 6px; }
+
+  /* ===== 图片放大 Lightbox ===== */
+  .screenshot { cursor: zoom-in; transition: transform 0.2s ease; }
+  .screenshot:hover { transform: translateY(-2px); }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 22, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    cursor: zoom-out;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .lightbox.show {
+    display: flex;
+    opacity: 1;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transition: transform 0.25s ease;
+    transform: scale(0.96);
+  }
+  .lightbox.show img { transform: scale(1); }
+
+  .lightbox-hint {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    pointer-events: none;
+  }
+  .lightbox-hint kbd {
+    background: rgba(255, 255, 255, 0.12);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    margin: 0 2px;
+  }
+
+  /* ===== 主布局 ===== */
+  .layout {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 64px;
+  }
+
+  /* ===== 侧边栏 ===== */
+  .sidebar {
+    position: sticky;
+    top: 72px;
+    align-self: start;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb {
+    background: #d2d2d7;
+    border-radius: 2px;
+  }
+  .sidebar-title {
+    font-size: 12px;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: #515154;
+    font-size: 14px;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    border-left: 2px solid transparent;
+    margin-left: -2px;
+  }
+  .sidebar a:hover {
+    color: #1d1d1f;
+    background: #f0f0f3;
+    text-decoration: none;
+  }
+  .sidebar a.active {
+    color: #0071e3;
+    background: #eaf3ff;
+    font-weight: 500;
+  }
+  .sidebar a .num {
+    font-size: 11px;
+    color: #86868b;
+    font-variant-numeric: tabular-nums;
+    min-width: 18px;
+    font-weight: 500;
+  }
+  .sidebar a.active .num { color: #0071e3; }
+  .sidebar a .emoji {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .sidebar-divider {
+    height: 1px;
+    background: #e8e8ed;
+    margin: 16px 0;
+  }
+
+  /* ===== 主内容 ===== */
+  .main { min-width: 0; }
+
+  /* ===== 步骤 ===== */
+  .step {
+    margin-bottom: 72px;
+    scroll-margin-top: 72px;
+  }
+  .step-num {
+    font-size: 13px;
+    color: #86868b;
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+  .step-title {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: #1d1d1f;
+  }
+  .step-title .emoji {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -1px;
+  }
+  .step-desc {
+    font-size: 17px;
+    color: #1d1d1f;
+    line-height: 1.65;
+    margin-bottom: 24px;
+  }
+  .step-desc strong {
+    font-weight: 600;
+    color: #0071e3;
+  }
+  .step-desc code {
+    font-family: "SF Mono", ui-monospace, Menlo, Monaco, monospace;
+    background: #f0f0f3;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 15px;
+    color: #1d1d1f;
+  }
+
+  /* 截图 */
+  .screenshot {
+    margin: 24px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+    border: 1px solid #ebebeb;
+    background: #fff;
+  }
+  .screenshot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* ===== 卡片(注意 / 建议 / 提示 / 警示) ===== */
+  .card {
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 15px;
+    line-height: 1.65;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .card-emoji {
+    font-size: 20px;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+  .card-body { flex: 1; }
+  .card-label {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  /* 注意 — 低饱和粉杏色 */
+  .card.warn { background: #fdf2ec; }
+  .card.warn .card-label,
+  .card.warn .card-body { color: #8a4a1f; }
+
+  /* 建议 — 低饱和薄荷青 */
+  .card.tip { background: #ecf6f1; }
+  .card.tip .card-label,
+  .card.tip .card-body { color: #2c5f47; }
+
+  /* 提示 — 低饱和雾霾蓝 */
+  .card.info { background: #eef2f9; }
+  .card.info .card-label,
+  .card.info .card-body { color: #3a4a6b; }
+
+  /* 警示 — 低饱和淡珊瑚 */
+  .card.alert { background: #fbebec; }
+  .card.alert .card-label,
+  .card.alert .card-body { color: #8a3a3f; }
+
+  /* 字段表 */
+  .field-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 15px;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #e8e8ed;
+  }
+  .field-table th,
+  .field-table td {
+    text-align: left;
+    padding: 14px 18px;
+    border-bottom: 1px solid #f0f0f3;
+  }
+  .field-table tr:last-child td { border-bottom: none; }
+  .field-table th {
+    color: #86868b;
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    background: #fafafd;
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .field-table td:first-child {
+    font-weight: 500;
+    color: #1d1d1f;
+  }
+  .field-table td code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    background: #f5f5f7;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* 有序列表 */
+  .step ol {
+    margin: 20px 0;
+    padding-left: 24px;
+  }
+  .step ol li {
+    margin-bottom: 10px;
+    color: #1d1d1f;
+    line-height: 1.65;
+  }
+  .step ol li strong { font-weight: 600; }
+
+  /* ===== 完成 ===== */
+  .done {
+    margin: 80px 0 64px;
+    padding: 44px 40px;
+    background: linear-gradient(135deg, #f0faf4 0%, #e8f5ed 100%);
+    border-radius: 18px;
+    text-align: center;
+  }
+  .done .emoji {
+    font-size: 40px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .done h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1d6b3a;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .done p {
+    font-size: 15px;
+    color: #2c5f47;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* ===== FAQ ===== */
+  .faq {
+    margin-top: 80px;
+    padding-top: 48px;
+    border-top: 1px solid #d2d2d7;
+  }
+  .faq h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 32px;
+    color: #1d1d1f;
+  }
+  .faq h2 .emoji { margin-right: 8px; }
+  .faq details {
+    border-bottom: 1px solid #e8e8ed;
+  }
+  .faq summary {
+    padding: 20px 0;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 500;
+    color: #1d1d1f;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: color 0.15s;
+  }
+  .faq summary:hover { color: #0071e3; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: '+';
+    font-size: 22px;
+    font-weight: 300;
+    color: #86868b;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .faq details[open] summary::after { content: '−'; }
+  .faq-answer {
+    padding: 0 0 20px;
+    color: #515154;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .faq-answer code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    background: #f5f5f7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* ===== 页脚 ===== */
+  .footer {
+    border-top: 1px solid #d2d2d7;
+    padding: 32px 32px 48px;
+    text-align: center;
+    font-size: 12px;
+    color: #86868b;
+  }
+
+  /* 响应式 */
+  @media (max-width: 860px) {
+    .layout {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .sidebar { display: none; }
+    .hero-wrap { padding: 56px 24px 32px; }
+    .layout { padding: 0 24px 64px; }
+    h1 { font-size: 32px; }
+    .step-title { font-size: 24px; }
+  }
+
+  /* 打印 */
+  @media print {
+    .topbar, .footer, .sidebar, .lightbox { display: none; }
+    .layout { grid-template-columns: 1fr; gap: 0; padding: 0; }
+    body { font-size: 12pt; background: #fff; }
+    .step { page-break-inside: avoid; margin-bottom: 32px; }
+    .screenshot { break-inside: avoid; box-shadow: none; }
+    .card, .summary, .done, .field-table { break-inside: avoid; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand">cloudwatch-ops <span>· 操作手册</span></div>
+    <div class="topbar-version">v1.0</div>
+  </div>
+</header>
+
+<section class="hero-wrap">
+  <div class="hero-eyebrow">{PARENT_PATH}</div>
+  <h1><span class="emoji">{MODULE_EMOJI}</span>{MODULE_NAME}</h1>
+  <div class="hero-date">更新日期 · {UPDATE_DATE}</div>
+  <div class="summary">
+    <p>
+      <span class="emoji">📖</span><strong>功能描述：</strong>{SUMMARY}。
+    </p>
+  </div>
+</section>
+
+<div class="layout">
+
+  <!-- ============ 侧边栏(根据步骤数增减) ============ -->
+  <aside class="sidebar">
+    <div class="sidebar-title">步骤导航</div>
+    <nav>
+      <a href="#step-1" class="step-link"><span class="num">01</span><span class="emoji">🚪</span><span>步骤一标题</span></a>
+      <a href="#step-2" class="step-link"><span class="num">02</span><span class="emoji">✏️</span><span>步骤二标题</span></a>
+      <a href="#step-3" class="step-link"><span class="num">03</span><span class="emoji">✅</span><span>步骤三标题</span></a>
+      <!-- 按需追加更多步骤... -->
+    </nav>
+    <div class="sidebar-divider"></div>
+    <nav>
+      <a href="#faq" class="step-link"><span class="num">??</span><span class="emoji">💬</span><span>常见问题</span></a>
+    </nav>
+  </aside>
+
+  <!-- ============ 主内容 ============ -->
+  <main class="main">
+
+    <!-- ============ 步骤模板:复制本块新增步骤 ============ -->
+    <section class="step" id="step-1">
+      <div class="step-num">步骤 01</div>
+      <h2 class="step-title"><span class="emoji">🚪</span>步骤一标题</h2>
+      <p class="step-desc">
+        操作描述,关键按钮用 <strong>按钮名</strong>,代码示例用 <code>code</code>。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/{SCREENSHOT_DIR}/步骤1_HH-MM-SS.png" alt="步骤一" loading="lazy">
+      </div>
+      <!-- 可选:卡片(notice/tip/info/alert 选一个) -->
+      <!--
+      <div class="card warn">
+        <div class="card-emoji">⚠️</div>
+        <div class="card-body">
+          <span class="card-label">注意</span>卡片正文,提示用户注意的事项。
+        </div>
+      </div>
+      -->
+    </section>
+
+    <!-- ============ 步骤示例:含字段表 ============ -->
+    <section class="step" id="step-2">
+      <div class="step-num">步骤 02</div>
+      <h2 class="step-title"><span class="emoji">✏️</span>步骤二标题</h2>
+      <p class="step-desc">
+        在弹出的对话框中填写字段,所有字段均为必填项。完成后点击 <strong>确定</strong>。
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/{SCREENSHOT_DIR}/步骤2_HH-MM-SS.png" alt="步骤二" loading="lazy">
+      </div>
+      <table class="field-table">
+        <thead>
+          <tr><th>字段</th><th>说明</th><th>示例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>字段A</td><td>字段A的说明</td><td><code>示例值A</code></td></tr>
+          <tr><td>字段B</td><td>字段B的说明</td><td><code>示例值B</code></td></tr>
+        </tbody>
+      </table>
+      <div class="card warn">
+        <div class="card-emoji">⚠️</div>
+        <div class="card-body">
+          <span class="card-label">注意</span>不可逆操作的提示。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 步骤示例:含有序列表 ============ -->
+    <section class="step" id="step-3">
+      <div class="step-num">步骤 03</div>
+      <h2 class="step-title"><span class="emoji">✅</span>步骤三标题</h2>
+      <p class="step-desc">
+        在弹出的对话框中,按以下步骤完成操作:
+      </p>
+      <div class="screenshot">
+        <img src="../操作手册截图/{SCREENSHOT_DIR}/步骤3_HH-MM-SS.png" alt="步骤三" loading="lazy">
+      </div>
+      <ol>
+        <li><strong>动作一 ①</strong> ——子动作描述。</li>
+        <li><strong>动作二 ②</strong> ——子动作描述。</li>
+        <li><strong>提交 ③</strong> ——点击 <strong>确定</strong> 完成。</li>
+      </ol>
+      <div class="card tip">
+        <div class="card-emoji">💡</div>
+        <div class="card-body">
+          <span class="card-label">建议</span>最佳实践提示。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 完成卡片 ============ -->
+    <div class="done">
+      <span class="emoji">🎉</span>
+      <h2>全部完成啦</h2>
+      <p>{完成后的总结,告诉用户接下来可以做什么}。</p>
+    </div>
+
+    <!-- ============ FAQ ============ -->
+    <section class="faq" id="faq">
+      <h2><span class="emoji">💬</span>常见问题</h2>
+
+      <details>
+        <summary>FAQ 问题一?</summary>
+        <div class="faq-answer">FAQ 答案一,详细说明问题原因和解决方法。</div>
+      </details>
+
+      <details>
+        <summary>FAQ 问题二?</summary>
+        <div class="faq-answer">FAQ 答案二。</div>
+      </details>
+
+      <details>
+        <summary>FAQ 问题三?</summary>
+        <div class="faq-answer">FAQ 答案三。</div>
+      </details>
+    </section>
+
+  </main>
+</div>
+
+<footer class="footer">
+  cloudwatch-ops 操作手册 · 2026
+</footer>
+
+<!-- 图片放大 Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-label="图片放大查看">
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-hint">点击任意位置 或 按 <kbd>Esc</kbd> 关闭</div>
+</div>
+
+<script>
+  // 侧边栏当前步骤高亮
+  const links = document.querySelectorAll('.step-link');
+  const steps = document.querySelectorAll('.step, #faq');
+  function updateActive() {
+    let current = '';
+    steps.forEach(step => {
+      const rect = step.getBoundingClientRect();
+      if (rect.top <= 120) current = step.id;
+    });
+    links.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+
+  // 图片点击放大
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+
+  document.querySelectorAll('.screenshot').forEach(box => {
+    box.addEventListener('click', () => {
+      const img = box.querySelector('img');
+      if (!img) return;
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt || '';
+      lightbox.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+
+  function closeLightbox() {
+    lightbox.classList.remove('show');
+    document.body.style.overflow = '';
+    setTimeout(() => { lightboxImg.src = ''; }, 200);
+  }
+
+  lightbox.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && lightbox.classList.contains('show')) closeLightbox();
+  });
+</script>
+
+</body>
+</html>
